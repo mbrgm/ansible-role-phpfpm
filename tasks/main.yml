@@ -1,0 +1,21 @@
+---
+- name: install_packages
+  package:
+    name: "{{ ','.join(phpfpm_packages) }}"
+    state: latest
+  notify: restart_phpfpm
+
+- name: configure_pools
+  template:
+    src: pool.conf
+    dest: /etc/php/7.0/fpm/pool.d/{{ item.key }}.conf
+    mode: 0640
+  with_dict: "{{ phpfpm_pools | default(dict(www={})) }}"
+  notify: reload_phpfpm
+
+- name: setup_service
+  service:
+    name: "{{ phpfpm_service }}"
+    state: started
+    enabled: True
+

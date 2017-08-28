@@ -1,0 +1,12 @@
+---
+- name: reload_phpfpm
+  listen: reload_phpfpm
+  service:
+    name: "{{ phpfpm_service }}"
+    state: reloaded
+
+- name: restart_phpfpm
+  listen: restart_phpfpm
+  service:
+    name: "{{ phpfpm_service }}"
+    state: restarted

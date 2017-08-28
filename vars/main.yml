@@ -1,0 +1,7 @@
+---
+phpfpm_packages:
+  - php7.0-fpm
+  - php-apcu    # for caching
+
+phpfpm_service: php7.0-fpm
+
