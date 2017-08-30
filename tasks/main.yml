@@ -5,17 +5,38 @@
     state: latest
   notify: restart_phpfpm
 
+- name: collect_pools
+  set_fact:
+    phpfpm_pools: "{{ (phpfpm_pools | default({})) | combine({ item: hostvars[inventory_hostname][item].phpfpm_pool }) }}"
+  when: hostvars[inventory_hostname][item] is defined and hostvars[inventory_hostname][item].phpfpm_pool is defined
+  with_items: "{{ group_names }}"
+  check_mode: False
+
+- name: get_existing_pools
+  shell: >-
+    find "{{ phpfpm_pool_dir }}" -type f -name "*.conf" -print0
+    | xargs -0 -I {} sh -c "basename {} | rev | cut -f 2- -d '.' | rev"
+  register: existing_pools
+  changed_when: False
+  check_mode: False
+
 - name: configure_pools
   template:
     src: pool.conf
-    dest: /etc/php/7.0/fpm/pool.d/{{ item.key }}.conf
+    dest: "{{ phpfpm_pool_dir }}/{{ item.key }}.conf"
     mode: 0640
-  with_dict: "{{ phpfpm_pools | default(dict(www={})) }}"
-  notify: reload_phpfpm
+  with_dict: "{{ phpfpm_pools }}"
+  notify: restart_phpfpm
+
+- name: remove_obsolete_pools
+  file:
+    state: absent
+    path: "{{ phpfpm_pool_dir }}/{{ item }}.conf"
+  with_items: "{{ existing_pools.stdout_lines | difference(phpfpm_pools) }}"
+  notify: restart_phpfpm
 
 - name: setup_service
   service:
     name: "{{ phpfpm_service }}"
     state: started
     enabled: True
-
